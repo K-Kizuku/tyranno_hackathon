@@ -1,0 +1,9 @@
+version: v1
+build:
+  excludes: [frontend,backend]
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT
