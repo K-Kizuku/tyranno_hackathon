@@ -32,3 +32,6 @@ typecheck:
 
 typecheck/watch:
 	bunx tsc --noEmit --watch
+
+gen:
+	bunx buf generate buf.build/connectrpc/eliza --template ../buf.gen.ts.yaml  
