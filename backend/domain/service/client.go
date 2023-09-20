@@ -123,7 +123,6 @@ func (c *clientService) ServeWs(hub *model.Hub, w http.ResponseWriter, r *http.R
 	}
 	client_ := &model.Client{Hub: hub, Conn: conn, Send: make(chan []byte, 256)}
 	client := &clientService{Client: *client_, repo: nil}
-	log.Printf("%v", client)
 	client.Client.Hub.Register <- &client.Client
 	go client.WritePump()
 	go client.ReadPump()

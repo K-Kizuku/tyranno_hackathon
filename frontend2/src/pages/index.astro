@@ -1,0 +1,111 @@
+---
+import { ViewTransitions } from "astro:transitions";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Particle Text</title>
+    <ViewTransitions />
+  </head>
+
+  <body class="test">
+    <a href="/test">test</a>
+    <!-- <canvas id="particleCanvas"></canvas> -->
+    <style>
+      .test {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background-color: #282828;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    </style>
+    <script>
+      const canvas = document.getElementById("particleCanvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      let particles = [];
+
+      class Particle {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.size = Math.random() * 5 + 1;
+          this.speedX = Math.random() * 3 - 1.5;
+          this.speedY = Math.random() * 3 - 1.5;
+        }
+
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          if (this.size > 0.2) this.size -= 0.1;
+        }
+
+        draw() {
+          ctx.fillStyle = "white";
+          ctx.strokeStyle = "black";
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+
+      function createParticles(event) {
+        const mouseX = event.x;
+        const mouseY = event.y;
+        for (let i = 0; i < 5; i++) {
+          particles.push(new Particle(mouseX, mouseY));
+        }
+      }
+
+      canvas.addEventListener("mousemove", createParticles);
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].update();
+          particles[i].draw();
+
+          if (particles[i].size <= 0.2) {
+            particles.splice(i, 1);
+            i--;
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+
+      function drawText() {
+        ctx.fillStyle = "white";
+        ctx.font = "50px Arial";
+        ctx.fillText(
+          "Particle Text",
+          canvas.width / 2 - 150,
+          canvas.height / 2
+        );
+      }
+
+      drawText();
+    </script>
+  </body>
+</html>

@@ -11,7 +11,7 @@
   - `new` 新規ゲーム
   - `over` ゲームオーバー
   - `move pos` posにブロックの座標を移動
-  - `r-move pos` 球速落下
+  - `r_move pos` 球速落下
   - `stop` 動いているブロックを止める
   - `create x` 新しいブロックの生成(xはブロックの種類)
 
