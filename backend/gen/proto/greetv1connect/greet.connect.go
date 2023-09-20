@@ -10,7 +10,7 @@ import (
 	errors "errors"
 	http "net/http"
 	strings "strings"
-	proto "tyranno/gen/proto"
+	proto "tyranno/backend/gen/proto"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are
@@ -39,7 +39,7 @@ const (
 
 // GreetServiceClient is a client for the greet.v1.GreetService service.
 type GreetServiceClient interface {
-	Greet(context.Context, *connect.Request[proto.GreetRequest]) (*connect.Response[proto.GreetResponse], error)
+	Greet(context.Context) *connect.BidiStreamForClient[proto.GreetRequest, proto.GreetResponse]
 }
 
 // NewGreetServiceClient constructs a client for the greet.v1.GreetService service. By default, it
@@ -66,13 +66,13 @@ type greetServiceClient struct {
 }
 
 // Greet calls greet.v1.GreetService.Greet.
-func (c *greetServiceClient) Greet(ctx context.Context, req *connect.Request[proto.GreetRequest]) (*connect.Response[proto.GreetResponse], error) {
-	return c.greet.CallUnary(ctx, req)
+func (c *greetServiceClient) Greet(ctx context.Context) *connect.BidiStreamForClient[proto.GreetRequest, proto.GreetResponse] {
+	return c.greet.CallBidiStream(ctx)
 }
 
 // GreetServiceHandler is an implementation of the greet.v1.GreetService service.
 type GreetServiceHandler interface {
-	Greet(context.Context, *connect.Request[proto.GreetRequest]) (*connect.Response[proto.GreetResponse], error)
+	Greet(context.Context, *connect.BidiStream[proto.GreetRequest, proto.GreetResponse]) error
 }
 
 // NewGreetServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -81,7 +81,7 @@ type GreetServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewGreetServiceHandler(svc GreetServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	greetServiceGreetHandler := connect.NewUnaryHandler(
+	greetServiceGreetHandler := connect.NewBidiStreamHandler(
 		GreetServiceGreetProcedure,
 		svc.Greet,
 		opts...,
@@ -99,6 +99,6 @@ func NewGreetServiceHandler(svc GreetServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedGreetServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGreetServiceHandler struct{}
 
-func (UnimplementedGreetServiceHandler) Greet(context.Context, *connect.Request[proto.GreetRequest]) (*connect.Response[proto.GreetResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("greet.v1.GreetService.Greet is not implemented"))
+func (UnimplementedGreetServiceHandler) Greet(context.Context, *connect.BidiStream[proto.GreetRequest, proto.GreetResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("greet.v1.GreetService.Greet is not implemented"))
 }

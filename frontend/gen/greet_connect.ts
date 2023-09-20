@@ -19,7 +19,7 @@ export const GreetService = {
       name: "Greet",
       I: GreetRequest,
       O: GreetResponse,
-      kind: MethodKind.Unary,
+      kind: MethodKind.BiDiStreaming,
     },
   }
 } as const;

@@ -1,11 +1,15 @@
 import { useState } from "react";
 import "./App.css";
+import { useClient } from "./hooks/useClient";
 
 import { createPromiseClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 
 // Import service definition that you want to connect to.
 import { GreetService } from "../gen/greet_connect";
+import { createAsyncIterable } from "@connectrpc/connect/protocol";
+import { PartialMessage } from "@bufbuild/protobuf";
+import { GreetRequest } from "../gen/greet_pb";
 
 // The transport defines what type of endpoint we're hitting.
 // In our example we'll be communicating with a Connect endpoint.
@@ -26,6 +30,7 @@ function App() {
       message: string;
     }[]
   >([]);
+  const client = useClient(GreetService);
   return (
     <>
       <ol>
@@ -49,23 +54,19 @@ function App() {
               message: inputValue,
             },
           ]);
-          const response = await client.greet(
-            {
-              name: inputValue,
-            },
-            {
-              headers: {
-                mode: "no-cors",
-              },
-            }
-          );
-          setMessages((prev) => [
-            ...prev,
-            {
-              fromMe: false,
-              message: response.greeting,
-            },
-          ]);
+          const a = new GreetRequest({ name: "test" });
+          const b = new GreetRequest({ name: "test2" });
+          const d = [a, b];
+          const test = createAsyncIterable<PartialMessage<GreetRequest>>(d);
+          const response = await client.greet(test);
+          console.log(response);
+          // setMessages((prev) => [
+          //   ...prev,
+          //   {
+          //     fromMe: false,
+          //     message: response,
+          //   },
+          // ]);
         }}
       >
         <input

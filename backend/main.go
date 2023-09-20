@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/rs/cors"
@@ -19,16 +23,37 @@ import (
 
 type GreetServer struct{}
 
-func (s *GreetServer) Greet(
-	ctx context.Context,
-	req *connect.Request[greetv1.GreetRequest],
-) (*connect.Response[greetv1.GreetResponse], error) {
-	log.Println("Request headers: ", req.Header())
-	res := connect.NewResponse(&greetv1.GreetResponse{
-		Greeting: fmt.Sprintf("Hello, %s!", req.Msg.Name),
-	})
-	res.Header().Set("Greet-Version", "v1")
-	return res, nil
+func (s *GreetServer) Greet(ctx context.Context, stream *connect.BidiStream[greetv1.GreetRequest, greetv1.GreetResponse]) error {
+	for i := 0; ; i++ {
+		msg, err := stream.Receive()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			connect.NewError(connect.CodeInternal, fmt.Errorf("failed to receive request: %w", err))
+		}
+		fmt.Println("Request message: ", msg)
+		if err := stream.Send(&greetv1.GreetResponse{
+			Greeting: fmt.Sprintf("Hello, %s! (%d)", msg.Name, i),
+		}); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to send response: %w", err))
+		}
+	}
+	// log.Println("Request headers: ", stream.RequestHeader())
+	// req, err := stream.Receive()
+	// log.Println("name: ", req.Name)
+	// // 2. 得られたエラーがio.EOFならばもうリクエストは送られてこない
+	// if errors.Is(err, io.EOF) {
+	// 	return stream.
+	// }
+	// res := connect.NewResponse(&greetv1.GreetResponse{
+	// 	Greeting: greeting.String(),
+	// })
+	// if err = stream.Send(res.Msg); err != nil {
+	// 	log.Println(err)
+	// }
+
+	// return res, nil
 }
 
 func main() {
@@ -36,15 +61,15 @@ func main() {
 }
 
 func run() int {
-	greeter := &GreetServer{}
-	mux := http.NewServeMux()
-	path, handler := greetv1connect.NewGreetServiceHandler(greeter)
-	mux.Handle(path, handler)
-	http.ListenAndServe(
-		"localhost:8080",
-		// Use h2c so we can serve HTTP/2 without TLS.
-		cors.AllowAll().Handler(h2c.NewHandler(mux, &http2.Server{})),
-	)
+	// greeter := &GreetServer{}
+	// mux := http.NewServeMux()
+	// path, handler := greetv1connect.NewGreetServiceHandler(greeter)
+	// mux.Handle(path, handler)
+	// http.ListenAndServe(
+	// 	"localhost:8080",
+	// 	// Use h2c so we can serve HTTP/2 without TLS.
+	// 	cors.AllowAll().Handler(h2c.NewHandler(mux, &http2.Server{})),
+	// )
 	const (
 		ok = 0
 		ng = 1
@@ -59,38 +84,38 @@ func run() int {
 	// healthzServer := healthz.New(logger)
 	// chatServer := chat.New(logger, chatInteractor)
 
-	// mux := http.NewServeMux()
-	// // mux.Handle(protoconnect.NewHealthzHandler(healthzServer))
-	// greeter := &GreetServer{}
-	// // mux.Handle(protoconnect.NewChatServiceHandler(chatServer))
-	// path, handlera := greetv1connect.NewGreetServiceHandler(greeter)
+	mux := http.NewServeMux()
+	// mux.Handle(protoconnect.NewHealthzHandler(healthzServer))
+	greeter := &GreetServer{}
+	// mux.Handle(protoconnect.NewChatServiceHandler(chatServer))
+	path, handlera := greetv1connect.NewGreetServiceHandler(greeter)
 
-	// mux.Handle(path, handlera)
-	// handler := cors.AllowAll().Handler(h2c.NewHandler(mux, &http2.Server{}))
+	mux.Handle(path, handlera)
+	handler := cors.AllowAll().Handler(h2c.NewHandler(mux, &http2.Server{}))
 
-	// srv := &http.Server{
-	// 	Addr:    ":8080",
-	// 	Handler: handler,
-	// }
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: handler,
+	}
 
-	// ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
-	// defer cancel()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
 
-	// go func() {
-	// 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-	// 		log.Fatal(err)
+	go func() {
+		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
 
-	// 		// logger.ErrorCtx(ctx, "failed to ListenAndServe", "err", err)
-	// 	}
-	// 	log.Fatal("test")
-	// }()
+			// logger.ErrorCtx(ctx, "failed to ListenAndServe", "err", err)
+		}
+		log.Fatal("test")
+	}()
 
-	// <-ctx.Done()
+	<-ctx.Done()
 
-	// timeoutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	// defer cancel()
-	// if err := srv.Shutdown(timeoutCtx); err != nil {
-	// 	return ng
-	// }
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(timeoutCtx); err != nil {
+		return ng
+	}
 	return ok
 }
