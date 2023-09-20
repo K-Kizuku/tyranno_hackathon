@@ -1,81 +1,42 @@
-import { useState } from "react";
-import "./App.css";
+import React from "react";
 
-import { createPromiseClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
+const App = () => {
+  const [message, setMessage] = React.useState<string>();
+  const socketRef = React.useRef<WebSocket>();
 
-// Import service definition that you want to connect to.
-import { GreetService } from "../gen/greet_connect";
+  // #0.WebSocket関連の処理は副作用なので、useEffect内で実装
+  React.useEffect(() => {
+    // #1.WebSocketオブジェクトを生成しサーバとの接続を開始
+    const websocket = new WebSocket("ws://localhost:8080/ws");
+    socketRef.current = websocket;
 
-// The transport defines what type of endpoint we're hitting.
-// In our example we'll be communicating with a Connect endpoint.
-const transport = createConnectTransport({
-  // baseUrl: "https://demo.connectrpc.com",
-  baseUrl: "http://localhost:8080",
-});
+    // #2.メッセージ受信時のイベントハンドラを設定
+    const onMessage = (event: MessageEvent<string>) => {
+      setMessage(event.data);
+    };
+    websocket.addEventListener("message", onMessage);
 
-// Here we make the client itself, combining the service
-// definition with the transport.
-const client = createPromiseClient(GreetService, transport);
+    // #3.useEffectのクリーンアップの中で、WebSocketのクローズ処理を実行
+    return () => {
+      websocket.close();
+      websocket.removeEventListener("message", onMessage);
+    };
+  }, []);
 
-function App() {
-  const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<
-    {
-      fromMe: boolean;
-      message: string;
-    }[]
-  >([]);
   return (
     <>
-      <ol>
-        {messages.map((msg, index) => (
-          <li key={index}>
-            {`${msg.fromMe ? "ME:" : "ELIZA:"} ${msg.message}`}
-          </li>
-        ))}
-      </ol>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          // Clear inputValue since the user has submitted.
-          setInputValue("");
-          // Store the inputValue in the chain of messages and
-          // mark this message as coming from "me"
-          setMessages((prev) => [
-            ...prev,
-            {
-              fromMe: true,
-              message: inputValue,
-            },
-          ]);
-          const response = await client.greet(
-            {
-              name: inputValue,
-            },
-            {
-              headers: {
-                mode: "no-cors",
-              },
-            }
-          );
-          setMessages((prev) => [
-            ...prev,
-            {
-              fromMe: false,
-              message: response.greeting,
-            },
-          ]);
+      <div>最後に受信したメッセージ: {message}</div>
+      <button
+        type="button"
+        onClick={() => {
+          // #4.WebSocketでメッセージを送信する場合は、イベントハンドラ内でsendメソッドを実行
+          socketRef.current?.send("送信メッセージ");
         }}
       >
-        <input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-        />
-        <button type="submit">Send</button>
-      </form>
+        送信
+      </button>
     </>
   );
-}
+};
 
 export default App;
