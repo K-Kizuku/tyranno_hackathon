@@ -12,7 +12,7 @@ backend:
 	go run backend/main.go   
 
 frontend:
-	make -C frontend dev
+	make -C frontend2 run
 
 compose/up:
 	$(DOCKER_COMPOSE) up -d

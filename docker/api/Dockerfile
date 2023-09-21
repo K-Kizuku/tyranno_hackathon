@@ -10,14 +10,14 @@ COPY go.sum .
 RUN go mod download
 
 COPY . .
-RUN go build -o api backend/main.go
+RUN go build -o api backend/cmd/main.go
 
 # ==== build docker image ====
 FROM alpine:${ALPINE_VERSION}
 
-WORKDIR /usr/src/tyranno
+WORKDIR /opt/tyranno
 
-COPY --from=go-builder /opt/api api
-RUN chmod +x "/usr/src/tyranno/api"
+COPY --from=go-builder /go/src/api api
+# RUN chmod +x "/usr/src/tyranno/api"
 
-ENTRYPOINT ["/usr/src/tyranno/api"]
+ENTRYPOINT ["/opt/tyranno/api"]
